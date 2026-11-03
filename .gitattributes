@@ -1,0 +1,5 @@
+# Windows에서 clone해도 컨테이너 안에서 도는 스크립트와 설정이 CRLF로 바뀌지 않게 한다
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.onnx binary

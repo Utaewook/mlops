@@ -1,0 +1,6 @@
+# webserver와 daemon이 코드를 읽어 올 곳. dagster-code 컨테이너의 gRPC 서버를 가리킨다.
+load_from:
+  - grpc_server:
+      host: dagster-code
+      port: 4000
+      location_name: pipelines

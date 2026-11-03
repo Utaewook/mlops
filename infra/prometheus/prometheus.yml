@@ -1,0 +1,12 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Triton 메트릭 (serving 프로필이 떠 있어야 up)
+  - job_name: triton
+    static_configs:
+      - targets: ["triton:8002"]

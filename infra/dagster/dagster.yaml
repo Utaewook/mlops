@@ -1,0 +1,28 @@
+# Dagster 인스턴스 설정. 실행 기록, 스케줄, 이벤트 로그를 PostgreSQL의 Dagster DB에 둔다.
+storage:
+  postgres:
+    postgres_db:
+      hostname:
+        env: POSTGRES_HOST
+      port: 5432
+      username:
+        env: POSTGRES_USER
+      password:
+        env: POSTGRES_PASSWORD
+      db_name:
+        env: DAGSTER_DB
+      # SQLAlchemy 2.1부터 postgresql://의 기본 드라이버가 psycopg(v3)라서,
+      # dagster-postgres가 설치하는 psycopg2를 명시한다
+      scheme: postgresql+psycopg2
+
+# 실행 요청을 큐에 넣고 daemon이 꺼내 돌린다. 메모리가 작은 PC를 위해 동시 실행 수를 줄인다.
+run_coordinator:
+  module: dagster.core.run_coordinator
+  class: QueuedRunCoordinator
+  config:
+    max_concurrent_runs: 2
+
+# run_launcher는 기본값(DefaultRunLauncher): 실행이 dagster-code 컨테이너 안의 프로세스로 돈다.
+
+telemetry:
+  enabled: false

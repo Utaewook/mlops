@@ -1,0 +1,35 @@
+# 비밀 값
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# 실습 산출물 (로컬 MLflow, 데이터, 리포트)
+mlruns/
+mlartifacts/
+mlflow.db
+data/*
+!data/.gitkeep
+reports/
+# python -m mlops train의 결과(내보낸 모델, report.json). ETTh1처럼 재배포가 제한된 데이터의 파생물이 들어 있다
+artifacts/
+.*.staging/
+
+# 테스트 커버리지
+.coverage
+htmlcov/
+
+# Triton 모델 저장소는 배포 스크립트가 채운다
+model_repository/*
+!model_repository/.gitkeep
+
+# 에디터, OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
