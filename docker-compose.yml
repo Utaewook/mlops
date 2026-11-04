@@ -275,6 +275,9 @@ services:
       <<: *stack-client-env
       HOME: /tmp
       USER: ${USER:-mlops}
+      # 저장소의 mlops 패키지는 설치하지 않고 경로로 import한다. 하위 폴더의 스크립트
+      # (python practice/ch03/train.py)에서도 import mlops가 되도록 저장소 루트를 넣는다
+      PYTHONPATH: /workspace
       # 3편처럼 컨테이너 안에서 mlflow ui를 띄울 때도 작업 실행기는 끈다
       MLFLOW_SERVER_ENABLE_JOB_EXECUTION: "false"
       # 스택 테스트에서 Grafana API를 확인할 때만 쓴다

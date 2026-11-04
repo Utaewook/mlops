@@ -1,0 +1,44 @@
+# 4편 실습 5(선택): 산출물 "직접 접근" 방식의 MLflow 서버를 기본 스택 옆에 하나 더 띄운다.
+#
+#   docker compose -f docker-compose.yml -f practice/ch04/direct-access.yml up -d --wait mlflow-direct
+#   docker compose -f docker-compose.yml -f practice/ch04/direct-access.yml rm -sf mlflow-direct   # 끄기
+#
+# 기본 mlflow 서비스(프록시 방식)와 비교할 점:
+#   - 같은 PostgreSQL을 쓴다. 그래서 두 서버는 같은 실험, run, 레지스트리를 본다.
+#   - --no-serve-artifacts: 서버가 파일을 대신 올려 주지 않는다. 새로 만든 실험의 산출물 위치가
+#     mlflow-artifacts:/... 대신 s3://<버킷>/direct/<실험 id>가 되고, 클라이언트가 그 주소에 직접 쓴다.
+#     그래서 학습하는 쪽에 S3 주소와 키가 있어야 한다.
+#   - 서버에도 키를 준다. UI에서 산출물을 열어 볼 때는 서버가 S3에서 읽어 오기 때문이다.
+
+services:
+  mlflow-direct:
+    image: mlops/mlflow:3.17.2
+    command:
+      - mlflow
+      - server
+      - --host=0.0.0.0
+      - --port=5002
+      # 비교용이라 프로세스 하나로 띄운다(기본 4개면 1GB 가까이 쓴다)
+      - --workers=1
+      - --no-serve-artifacts
+      - --default-artifact-root=s3://${MLFLOW_BUCKET:-mlflow}/direct
+    environment:
+      MLFLOW_BACKEND_STORE_URI: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${MLFLOW_DB:-mlflow}
+      MLFLOW_S3_ENDPOINT_URL: http://seaweedfs:8333
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:?.env를 만드세요}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:?.env를 만드세요}
+      MLFLOW_SERVER_ENABLE_JOB_EXECUTION: "false"
+      MLFLOW_SERVER_ALLOWED_HOSTS: localhost,localhost:*,127.0.0.1,127.0.0.1:*,mlflow-direct,mlflow-direct:*
+    ports:
+      - "127.0.0.1:${MLFLOW_DIRECT_PORT:-5002}:5002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      seaweedfs:
+        condition: service_healthy
+    healthcheck:
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5002/health', timeout=4)"]

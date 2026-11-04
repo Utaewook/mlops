@@ -81,8 +81,11 @@ def split_by_quarter(features: pd.DataFrame) -> dict[str, pd.DataFrame]:
     return {name: features[quarters == name].reset_index(drop=True) for name in SLICES}
 
 
-def _matrix(df: pd.DataFrame) -> np.ndarray:
-    # ONNX 모델의 입력이 float32라서 학습과 예측도 같은 값으로 한다
+def feature_matrix(df: pd.DataFrame) -> np.ndarray:
+    """모델 입력 행렬. 열 순서는 FEATURES다.
+
+    ONNX 모델의 입력이 float32라서 학습과 예측도 같은 값으로 한다.
+    """
     return df[list(FEATURES)].to_numpy(dtype=np.float32)
 
 
@@ -163,9 +166,9 @@ class TimeSeriesTask:
             verbose=-1,
         )
         model.fit(
-            _matrix(train),
+            feature_matrix(train),
             _change(train),
-            eval_X=(_matrix(valid),),
+            eval_X=(feature_matrix(valid),),
             eval_y=(_change(valid),),
             callbacks=[lgb.early_stopping(params["early_stopping_rounds"], verbose=False)],
         )
@@ -173,7 +176,7 @@ class TimeSeriesTask:
         return model
 
     def predict(self, model: lgb.LGBMRegressor, df: pd.DataFrame) -> np.ndarray:
-        return df[CURRENT_OT].to_numpy() + model.predict(_matrix(df))
+        return df[CURRENT_OT].to_numpy() + model.predict(feature_matrix(df))
 
     def evaluate(self, df: pd.DataFrame, predictions: np.ndarray) -> dict[str, float]:
         """skill = 1 - mae / naive_mae. 0보다 크면 지금 온도를 그대로 쓰는 것보다 낫다."""

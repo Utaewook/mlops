@@ -28,8 +28,8 @@ docker compose run --rm workspace pytest -m base
 
 | 편 | 띄우는 명령 | 추가되는 서비스 | 테스트 마커 |
 |---|---|---|---|
-| 3 | 띄울 것 없음. workspace만 씁니다 ([아래](#실습-코드-돌리기)) | - | - |
-| 4 | `docker compose up -d --wait` | postgres, seaweedfs, mlflow | `base` |
+| 3 | 띄울 것 없음. workspace만 씁니다 ([실습 안내](practice/ch03/README.md)) | - | - |
+| 4 | `docker compose up -d --wait` ([실습 안내](practice/ch04/README.md)) | postgres, seaweedfs, mlflow | `base` |
 | 5 | `docker compose --profile serving up -d --wait` | triton | `serving` |
 | 6 | `docker compose --profile orchestration up -d --wait` | dagster-code, dagster-webserver, dagster-daemon | `orchestration` |
 | 7 | `docker compose --profile monitoring up -d --wait` | prometheus, grafana | `monitoring` |
@@ -63,12 +63,12 @@ docker compose run --rm workspace python 파일.py
 docker compose run --rm workspace bash          # 셸로 들어가기
 ```
 
-3편처럼 서버 없이 로컬에만 기록할 때는 트래킹 서버 주소를 비웁니다.
+3편처럼 서버 없이 로컬에만 기록할 때는 트래킹 서버 주소를 비웁니다. 3편 실습은 이 명령을 감싼 `practice/ch03/run.sh`로 돌립니다([실습 안내](practice/ch03/README.md)).
 
 ```bash
 docker compose run --rm --no-deps -e MLFLOW_TRACKING_URI= workspace python 파일.py
 docker compose run --rm --no-deps -e MLFLOW_TRACKING_URI= -p 127.0.0.1:5001:5001 \
-  workspace mlflow ui --host 0.0.0.0 --port 5001
+  workspace mlflow ui --host 0.0.0.0 --port 5001 --workers 1
 ```
 
 6편의 Dagster 코드는 `pipelines/`에 씁니다. dagster-code 컨테이너가 저장소 전체를 읽기 전용으로 붙이므로 3~5편 코드를 import할 수 있습니다. 코드를 고친 뒤에는 Dagster UI에서 Reload를 누릅니다.

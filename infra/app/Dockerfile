@@ -26,6 +26,12 @@ COPY pyproject.toml uv.lock .python-version ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-install-project
 
+# MLflow가 run에 git 커밋(mlflow.source.git.commit)을 태그로 남기려면 git 실행 파일이 있어야 한다(3편).
+# 위의 의존성 층을 다시 만들지 않도록 따로 둔다
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
 # 내려받은 데이터 원본, 사전학습 가중치, Hugging Face 모델을 둘 캐시. compose가 model-cache 볼륨을 붙이고,
 # 볼륨은 처음 붙을 때 이 폴더의 권한을 물려받는다. workspace는 호스트 사용자 ID로 돌기 때문에 누구나 쓸 수 있게 둔다
 ENV HF_HOME=/cache/huggingface \
