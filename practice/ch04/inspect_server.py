@@ -9,7 +9,9 @@
     학습 코드 ──HTTP──▶ MLflow 서버 ──SQL──▶ PostgreSQL   (실험, run, 파라미터, 지표, 모델 행, 레지스트리)
                               └────S3 API──▶ SeaweedFS    (모델 파일. 프록시 방식일 때 서버가 대신 올린다)
 
-학습 코드는 서버 주소(MLFLOW_TRACKING_URI)만 알고 DB와 버킷에는 접속하지 않는다. 이 스크립트는 점검용이라
+학습 코드는 서버 주소(MLFLOW_TRACKING_URI)만 알고 DB 계정과 S3 키는 모른다. 다만 MLflow 3.17은 프록시
+방식에서도 모델 파일을 내려받을 때 서버에게 서명된 주소(presigned URL, 5분 유효)만 받고 SeaweedFS에서 직접
+받는다. 그래서 키는 없어도 SeaweedFS에 네트워크로 닿아야 한다. 이 스크립트는 점검용이라
 PostgreSQL 계정과 S3 키로 두 저장소를 직접 연다(실제 팀이라면 운영자만 가진 권한이다). 읽기만 한다.
 
 두 저장소는 따로 쓰인다. 지표는 PostgreSQL에 들어갔는데 모델 파일은 버킷에 못 올라가는 일이 생길 수 있다.
@@ -68,7 +70,10 @@ def artifact_mode(location: str) -> str:
     """
     scheme = urlparse(location).scheme
     if scheme == PROXY_SCHEME:
-        return "프록시. 클라이언트는 서버에 HTTP로 보내고 서버가 버킷에 쓴다. 클라이언트에 S3 키가 필요 없다"
+        return (
+            "프록시. 올릴 때는 클라이언트가 서버에 HTTP로 보내고 서버가 버킷에 쓴다. 받을 때는 서버가 서명해 준"
+            " 주소로 버킷에서 직접 받는다. 어느 쪽이든 클라이언트에 S3 키가 필요 없다"
+        )
     if scheme == "s3":
         return "직접 접근. 클라이언트가 이 S3 주소에 직접 쓴다. 클라이언트에 S3 주소와 키가 있어야 한다"
     return "로컬 경로. 이 경로가 보이는 컴퓨터에서만 파일을 열 수 있다(3편)"

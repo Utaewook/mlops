@@ -22,7 +22,10 @@ def test_bucket_and_prefix(location, expected):
 
 
 def test_artifact_mode_names_who_needs_keys():
-    assert "S3 키가 필요 없다" in artifact_mode("mlflow-artifacts:/11")
+    proxy = artifact_mode("mlflow-artifacts:/11")
+    assert "S3 키가 필요 없다" in proxy
+    # MLflow 3.17은 프록시 방식에서도 내려받기는 서버가 서명한 주소로 버킷에서 직접 한다
+    assert "서명" in proxy
     assert "키가 있어야 한다" in artifact_mode("s3://mlflow/direct/12")
     assert "로컬 경로" in artifact_mode("/workspace/mlruns/1")
 

@@ -16,6 +16,7 @@ from mlflow import MlflowClient
 from mlops.slices import read_slice, write_slices
 from mlops.tasks.timeseries import (
     CURRENT_OT,
+    FEATURES,
     LOAD_COLUMNS,
     TASK,
     build_features,
@@ -162,12 +163,44 @@ def test_register_rejects_names_that_would_break_the_search_filter(store):
 def test_inspect_store_shows_tables_and_model_files(store, capsys):
     inspect_store = importlib.import_module("inspect_store")
 
-    inspect_store.main()
+    inspect_store.main([])
 
     out = capsys.readouterr().out
     assert "logged_models" in out
     assert "model_versions" in out
     assert "MLmodel" in out
+    # 이름을 주지 않으면 가장 최근 run(여기서는 autolog run)의 태그를 보여 준다.
+    # UI의 Tags에는 안 보이는 MLflow 자동 태그까지 나온다
+    assert "autolog-" in out
+    assert "mlflow.source.name" in out
+
+
+def test_inspect_store_counts_rows_per_run_so_manual_and_autolog_differ(store):
+    inspect_store = importlib.import_module("inspect_store")
+
+    counts = {row.name: row for row in inspect_store.run_counts(Path("mlflow.db"))}
+
+    manual = counts["manual-lr0.05-leaves31"]
+    # 하이퍼파라미터 6개와 학습·검증 구간 2개
+    assert manual.params == 8
+    # 지표 6개(mae, rmse, naive_mae, skill, rows, best_iteration)와 학습 곡선 1개
+    assert manual.latest_metrics == 7
+    # metrics 표에는 곡선의 step마다 한 행씩 들어가서 latest_metrics보다 많다
+    assert manual.metrics > manual.latest_metrics
+    autolog = next(row for name, row in counts.items() if name.startswith("autolog-"))
+    assert autolog.params > manual.params
+
+
+def test_inspect_store_shows_tags_of_the_named_run(store, capsys):
+    inspect_store = importlib.import_module("inspect_store")
+
+    inspect_store.main(["--run-name", "manual-lr0.3-leaves31"])
+
+    out = capsys.readouterr().out
+    assert "== run manual-lr0.3-leaves31" in out
+    assert "logging" in out
+    with pytest.raises(SystemExit, match="없는 run 이름"):
+        inspect_store.main(["--run-name", "no-such-run"])
 
 
 def test_forecast_adds_current_temperature_to_predicted_change(store):
@@ -177,3 +210,31 @@ def test_forecast_adds_current_temperature_to_predicted_change(store):
     forecast = predict.forecast(ConstantChange(1.5), df)
 
     assert np.allclose(forecast, df[CURRENT_OT].to_numpy() + 1.5)
+
+
+def test_swap_columns_shows_tensor_signature_misses_order_but_named_schema_catches_it(store):
+    register = importlib.import_module("register")
+    swap_columns = importlib.import_module("swap_columns")
+    register.main(["--model-name", "test-swap", "register"])
+    register.main(["--model-name", "test-swap", "alias", "1"])
+
+    results = swap_columns.main(["--model-name", "test-swap", *store["data"]])
+
+    # 열 이름이 없는 형식: 순서를 바꿔도 받아 주고, 타입과 열 개수만 거부한다
+    assert results["swapped"] is not None
+    assert results["float64"] is None
+    assert results["missing_column"] is None
+    # 열 이름이 있는 형식: 이름으로 맞춰 넣으므로 순서를 바꿔도 같고, 빠진 열은 거부한다
+    assert results["named_same_order"] == pytest.approx(results["same_order"])
+    assert results["named_swapped"] == pytest.approx(results["named_same_order"])
+    assert results["named_missing_column"] is None
+
+
+def test_swapped_order_exchanges_only_the_two_columns(store):
+    swap_columns = importlib.import_module("swap_columns")
+    first, second = swap_columns.SWAP
+
+    order = swap_columns.swapped_order()
+
+    expected = [second if name == first else first if name == second else name for name in FEATURES]
+    assert order == expected

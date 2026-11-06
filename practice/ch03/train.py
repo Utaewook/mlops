@@ -138,14 +138,20 @@ def log_results(
     #        MLmodel              이 폴더를 어떻게 불러오는지 적은 설명서. flavor(lightgbm, python_function),
     #                             입력·출력 형식(signature), 만든 run_id, MLflow·Python 버전
     #        requirements.txt, python_env.yaml, conda.yaml
-    #                             불러올 때 필요한 패키지와 버전. 모델을 한 번 불러 보며 import되는 패키지를
-    #                             추론한 것이라 실제로는 필요 없는 패키지(이 저장소에서는 torch, pytest)가 섞인다
+    #                             불러올 때 필요한 패키지와 버전. 만드는 방법이 둘이다.
+    #                             - 지금 폴더에 uv.lock과 pyproject.toml이 있으면(저장소 루트에서 돌리면 그렇다)
+    #                               `uv export`로 프로젝트 전체 의존성을 적는다. 이 저장소에서는 torch, dagster까지
+    #                               205줄이다. LightGBM 모델 하나에 필요한 것보다 훨씬 많다
+    #                             - 아니면(또는 MLFLOW_UV_AUTO_DETECT=false) 모델을 한 번 불러 보며 import되는
+    #                               패키지를 추론한다. 12줄이지만 여기에도 필요 없는 torch, pytest가 섞인다
+    #                             정확히 하려면 log_model에 pip_requirements를 직접 넘긴다
     #        input_example.json, serving_input_example.json
     #                             아래 입력 예시. 뒤의 것은 REST로 서빙할 때 보낼 요청 본문 모양이다
     #   3. 지금 run의 파라미터와 지표를 모델에도 연결한다(logged_model_params, logged_model_metrics 표).
     #      그래서 실험의 Models 화면에서 run을 거치지 않고 바로 모델끼리 지표를 비교할 수 있다
     # 모델 파일은 run 폴더(mlruns/<실험 id>/<run id>/artifacts/)가 아니라 models/ 아래에 있다.
-    # 그래서 UI의 run 화면 Artifacts 탭은 비어 있고, 모델은 실험의 Models 화면에 따로 나온다
+    # run 폴더는 만들어지지도 않는다. UI의 run 화면 Artifacts 탭에 보이는 파일은 run에 연결된 모델의 파일이고,
+    # 탭 위에 "You're viewing artifacts assigned to a logged model associated with this run."이라고 나온다
     #
     # input_example을 주면 MLflow가 입력 형식(signature)을 추론한다. 여기서는 float32 행렬이라
     # MLmodel에 "입력: float32 텐서 [-1, 15], 출력: float64 텐서 [-1]"로 적힌다.
